@@ -87,7 +87,10 @@ public class NativeS3FileSystem extends FileSystem {
   private static final String FOLDER_SUFFIX = "_$folder$";
   static final String PATH_DELIMITER = Path.SEPARATOR;
   private static final int S3_MAX_LISTING_LENGTH = 1000;
+  private static final String S3N_DEFAULT_OWNER = "fs.s3n.defaultOwner";
   
+  private String defaultOwner = "yarn";
+
   static class NativeS3FsInputStream extends FSInputStream {
     
     private NativeFileSystemStore store;
@@ -260,9 +263,11 @@ public class NativeS3FileSystem extends FileSystem {
     }
     store.initialize(uri, conf);
     setConf(conf);
-    this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+    this.uri = URI.create(uri.getScheme() + "://" + uri.getRawAuthority());
     this.workingDir =
       new Path("/user", System.getProperty("user.name")).makeQualified(this);
+
+    defaultOwner = conf.get(S3N_DEFAULT_OWNER, defaultOwner);
   }
   
   private static NativeFileSystemStore createDefaultStore(Configuration conf) {
@@ -500,11 +505,11 @@ public class NativeS3FileSystem extends FileSystem {
   
   private FileStatus newFile(FileMetadata meta, Path path) {
     return new FileStatus(meta.getLength(), false, 1, getDefaultBlockSize(),
-        meta.getLastModified(), path.makeQualified(this));
+        meta.getLastModified(), 0, null, defaultOwner, null, path.makeQualified(this));
   }
   
   private FileStatus newDirectory(Path path) {
-    return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this));
+    return new FileStatus(0, true, 1, 0, 0, 0, null, defaultOwner, null, path.makeQualified(this));
   }
 
   @Override

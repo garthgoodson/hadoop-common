@@ -34,6 +34,8 @@ public interface FsConstants {
   // URI scheme for FTP
   public static final String FTP_SCHEME = "ftp";
   
+  // URI scheme for S3 native
+  public static final String S3N_SCHEME = "s3n";
   
   /**
    * ViewFs: viewFs file system (ie the mount file system on client side)

@@ -361,7 +361,11 @@ public abstract class AbstractFileSystem {
        (thisHost != null && 
             !thisHost.equalsIgnoreCase(thatHost)) ||
        (thisHost == null && thatHost != null)) {
-      throw new InvalidPathException("Wrong FS: " + path + ", expected: "
+
+        System.out.println(thisScheme + " - " + thatScheme + ", " +
+                           thisHost + " - " + thatHost);
+
+      throw new InvalidPathException("Wrong FS: (scheme/host)" + path + ", expected: "
           + this.getUri());
     }
     
@@ -373,7 +377,8 @@ public abstract class AbstractFileSystem {
       thatPort = this.getUriDefaultPort();
     }
     if (thisPort != thatPort) {
-      throw new InvalidPathException("Wrong FS: " + path + ", expected: "
+        System.out.println(thisPort + " - " + thatPort);
+      throw new InvalidPathException("Wrong FS (port): " + path + ", expected: "
           + this.getUri());
     }
   }

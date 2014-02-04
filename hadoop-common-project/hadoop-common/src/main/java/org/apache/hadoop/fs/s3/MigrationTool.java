@@ -33,10 +33,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.jets3t.service.S3Service;
-import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
+import org.jets3t.service.model.StorageObject;
 import org.jets3t.service.security.AWSCredentials;
 
 /**
@@ -85,7 +86,7 @@ public class MigrationTool extends Configured implements Tool {
       migrate(oldStore, newStore);
       return 0;
     } else {
-      S3Object root = get("/");
+      StorageObject root = get("/");
       if (root != null) {
         String version = (String) root.getMetadata("fs-version");
         if (version == null) {
@@ -156,7 +157,7 @@ public class MigrationTool extends Configured implements Tool {
       AWSCredentials awsCredentials =
         new AWSCredentials(accessKey, secretAccessKey);
       this.s3Service = new RestS3Service(awsCredentials);
-    } catch (S3ServiceException e) {
+    } catch (ServiceException e) {
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
       }
@@ -174,11 +175,11 @@ public class MigrationTool extends Configured implements Tool {
     }
   }
   
-  private S3Object get(String key) {
+  private StorageObject get(String key) {
     try {
-      return s3Service.getObject(bucket, key);
-    } catch (S3ServiceException e) {
-      if ("NoSuchKey".equals(e.getS3ErrorCode())) {
+      return s3Service.getObject(bucket.getName(), key);
+    } catch (ServiceException e) {
+      if ("NoSuchKey".equals(e.getErrorCode())) {
         return null;
       }
     }
@@ -198,13 +199,13 @@ public class MigrationTool extends Configured implements Tool {
     public Set<Path> listAllPaths() throws IOException {
       try {
         String prefix = urlEncode(Path.SEPARATOR);
-        S3Object[] objects = s3Service.listObjects(bucket, prefix, null);
+        StorageObject[] objects = s3Service.listObjects(bucket.getName(), prefix, null);
         Set<Path> prefixes = new TreeSet<Path>();
         for (int i = 0; i < objects.length; i++) {
           prefixes.add(keyToPath(objects[i].getKey()));
         }
         return prefixes;
-      } catch (S3ServiceException e) {
+      } catch (ServiceException e) {
         if (e.getCause() instanceof IOException) {
           throw (IOException) e.getCause();
         }
@@ -219,24 +220,24 @@ public class MigrationTool extends Configured implements Tool {
     private void delete(String key) throws IOException {
       try {
         s3Service.deleteObject(bucket, key);
-      } catch (S3ServiceException e) {
+      } catch (ServiceException e) {
         if (e.getCause() instanceof IOException) {
           throw (IOException) e.getCause();
         }
         throw new S3Exception(e);
       }
     }
-    
+
     public INode retrieveINode(Path path) throws IOException {
       return INode.deserialize(get(pathToKey(path)));
     }
 
     private InputStream get(String key) throws IOException {
       try {
-        S3Object object = s3Service.getObject(bucket, key);
+        StorageObject object = s3Service.getObject(bucket.getName(), key);
         return object.getDataInputStream();
-      } catch (S3ServiceException e) {
-        if ("NoSuchKey".equals(e.getS3ErrorCode())) {
+      } catch (ServiceException e) {
+        if ("NoSuchKey".equals(e.getErrorCode())) {
           return null;
         }
         if (e.getCause() instanceof IOException) {
