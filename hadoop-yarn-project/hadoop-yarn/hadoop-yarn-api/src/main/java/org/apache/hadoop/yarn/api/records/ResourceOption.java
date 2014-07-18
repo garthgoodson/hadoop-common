@@ -44,7 +44,16 @@ public abstract class ResourceOption {
   
   @Private
   @Evolving
-  protected abstract void setResource(Resource resource);
+  public abstract void setResource(Resource resource);
+
+  /**
+   * NATERO
+   * NATERO
+   * NATERO
+   */
+  public void setRez(Resource rez){
+    setResource(rez);
+  }
   
   /**
    * Get timeout for tolerant of resource over-commitment

@@ -65,15 +65,41 @@ public class MaxRunningAppsEnforcer {
       return false;
     }
     // Check queue and all parent queues
+    // NATERO
+    // NATERO
+    // Interpret the queueMaxApps as a percentage of apps allowed to vcores, 50 -> 50%, assuming 20 vcores => maxApps = 10
+    // NATERO
+    // NATERO
     while (queue != null) {
       int queueMaxApps = allocConf.getQueueMaxApps(queue.getName());
-      if (queue.getNumRunnableApps() >= queueMaxApps) {
+      int calculatedMaxApps = calculateMaxApps(queueMaxApps);
+      // calculatedMaxApps = queueMaxApps; //uncomment this to put everything back to normal
+
+      LOG.info("EvAn eVaN EvAn: cur num runnable apps: "+queue.getNumRunnableApps());
+      if (queue.getNumRunnableApps() >= calculatedMaxApps) {
+        LOG.info("evan EVAN evan: App rejected, queue runnable app count:"+queue.getNumRunnableApps()+" >= "+calculatedMaxApps);
         return false;
       }
       queue = queue.getParent();
     }
-
+    LOG.info("EVAN evan EVAN: App allowed!");
     return true;
+  }
+
+  /**
+   * NATERO
+   * NATERO
+   * NATERO
+   * Interpret the queueMaxApps as a percentage of apps allowed to vcores, 50 -> 50%, assuming 20 vcores => maxApps = 10
+   * Helper function to automate calculating the number of max apps allowed from the percentage in allocation file
+   */
+  public int calculateMaxApps(int queueMaxApps){
+    int clusterVcores = scheduler.getClusterCapacity().getVirtualCores();
+    LOG.info("EVAN EVAN EVAN: Calculating max apps. cluster vcores: "+clusterVcores+", maxAppsPercent: "+queueMaxApps+"%");
+    float maxAppsPercent = ((float)queueMaxApps) / 100.0f;
+    int calculatedMaxApps = (int) (maxAppsPercent * clusterVcores);
+    LOG.info("EVAN Evan eVan: calculated max apps: "+calculatedMaxApps);
+    return calculatedMaxApps;
   }
 
   /**
@@ -122,12 +148,25 @@ public class MaxRunningAppsEnforcer {
     // the queue was already at its max before the removal.
     // Thus we find the ancestor queue highest in the tree for which the app
     // that was at its maxRunningApps before the removal.
+    
+    //NATERO
+    //NATERO
+    //Interpret queueMaxApps as percentage again
+    //NATERO
+    int queueMaxApps = allocConf.getQueueMaxApps(queue.getName());
+    int calculatedMaxApps = calculateMaxApps(queueMaxApps);
+    //calculatedMaxApps = queueMaxApps; //Uncomment this to put things back to normal
+
+    LOG.info("evaN Evan evaN: queue num runnable apps:"+queue.getNumRunnableApps()+", queue max apps:"+(calculatedMaxApps - 1));
     FSQueue highestQueueWithAppsNowRunnable = (queue.getNumRunnableApps() ==
-        allocConf.getQueueMaxApps(queue.getName()) - 1) ? queue : null;
+        (calculatedMaxApps - 1)) ? queue : null;
     FSParentQueue parent = queue.getParent();
     while (parent != null) {
-      if (parent.getNumRunnableApps() == allocConf.getQueueMaxApps(parent
-          .getName()) - 1) {
+      //NATERO NATEOR NATERO
+      calculatedMaxApps = calculateMaxApps(allocConf.getQueueMaxApps(parent.getName()));
+      // calculatedMaxApp = allocConf.getQueueMaxApps(parent.getName());
+
+      if (parent.getNumRunnableApps() == (calculatedMaxApps - 1)) {
         highestQueueWithAppsNowRunnable = parent;
       }
       parent = parent.getParent();
@@ -166,7 +205,7 @@ public class MaxRunningAppsEnforcer {
       if (next == prev) {
         continue;
       }
-
+      
       if (canAppBeRunnable(next.getQueue(), next.getUser())) {
         trackRunnableApp(next);
         AppSchedulable appSched = next.getAppSchedulable();
@@ -236,8 +275,15 @@ public class MaxRunningAppsEnforcer {
    */
   private void gatherPossiblyRunnableAppLists(FSQueue queue,
       List<List<AppSchedulable>> appLists) {
-    if (queue.getNumRunnableApps() < scheduler.getAllocationConfiguration()
-        .getQueueMaxApps(queue.getName())) {
+
+    //NATERO
+    //NATERO
+    //NATERO
+    int queueMaxApps = scheduler.getAllocationConfiguration().getQueueMaxApps(queue.getName());
+    int calculatedMaxApps = calculateMaxApps(queueMaxApps);
+    //calculatedMaxApps = queueMaxApps; //Uncomment to put things back to normal
+
+    if (queue.getNumRunnableApps() < calculatedMaxApps) {
       if (queue instanceof FSLeafQueue) {
         appLists.add(((FSLeafQueue)queue).getNonRunnableAppSchedulables());
       } else {

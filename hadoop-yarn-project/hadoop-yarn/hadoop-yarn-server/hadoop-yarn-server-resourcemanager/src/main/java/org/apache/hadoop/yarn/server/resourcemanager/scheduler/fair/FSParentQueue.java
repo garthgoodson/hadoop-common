@@ -146,6 +146,14 @@ public class FSParentQueue extends FSQueue {
       return assigned;
     }
 
+    //NATERO
+    //If this node is marked decommissioned, reject
+    //NATERO
+    if (node.isDecommissioned()){
+      LOG.info("Trying to assign container on decommissioned node, REEEJECTTEDDDDDDD");
+      return assigned;
+    }
+
     Collections.sort(childQueues, policy.getComparator());
     for (FSQueue child : childQueues) {
       assigned = child.assignContainer(node);

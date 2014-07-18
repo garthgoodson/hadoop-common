@@ -246,6 +246,19 @@ public class FairScheduler extends AbstractYarnScheduler {
     return queueMgr;
   }
 
+  /**
+   * Natero
+   * Natero
+   * Gets FSSchedulerNode corresponding to NodeId nid from the private nodes map
+   * Natero
+   * Natero
+   * @param  nid nodeid, should be 'hostname:port'
+   * @return     corresponding FSSchedulerNode
+   */
+  public FSSchedulerNode getNode(NodeId nid){
+    return nodes.get(nid);
+  }
+
   @Override
   public RMContainer getRMContainer(ContainerId containerId) {
     FSSchedulerApp attempt = getCurrentAttemptForContainer(containerId);
@@ -838,8 +851,13 @@ public class FairScheduler extends AbstractYarnScheduler {
     if (node == null) {
       return;
     }
-    Resources.subtractFrom(clusterCapacity, rmNode.getTotalCapability());
-    updateRootQueueMetrics();
+
+    //NATERO
+    //NATERO
+    if(!node.isDecommissioned()){
+      Resources.subtractFrom(clusterCapacity, rmNode.getTotalCapability());
+      updateRootQueueMetrics();
+    }
 
     // Remove running containers
     List<RMContainer> runningContainers = node.getRunningContainers();
@@ -963,7 +981,12 @@ public class FairScheduler extends AbstractYarnScheduler {
     }
     eventLog.log("HEARTBEAT", nm.getHostName());
     FSSchedulerNode node = nodes.get(nm.getNodeID());
-
+    //NATERO
+    //NATERO
+    //NATERO
+    LOG.info("EVANNN: got a node update for "+nm.getHostName()+", total capability:"+nm.getTotalCapability()+", cluster capacity:"+clusterCapacity);
+    LOG.info("EVANNNN: FSSchedulerNode: avail resources:"+node.getAvailableResource());
+    
     // Update resource if any change
     SchedulerUtils.updateResourceIfChanged(node, nm, clusterCapacity, LOG);
     
@@ -985,6 +1008,14 @@ public class FairScheduler extends AbstractYarnScheduler {
       LOG.debug("Container FINISHED: " + containerId);
       completedContainer(getRMContainer(containerId),
           completedContainer, RMContainerEventType.FINISHED);
+    }
+
+    //NATERO
+    //NATERO
+    //NATERO
+    if(node.isDecommissioned()){
+      LOG.info("EVAN: Rejecting node at FairSched level");
+      return;
     }
 
     if (continuousSchedulingEnabled) {
@@ -1132,7 +1163,7 @@ public class FairScheduler extends AbstractYarnScheduler {
    * be updated synchronously with allocations and completions so that cluster
    * metrics will be consistent.
    */
-  private void updateRootQueueMetrics() {
+  public void updateRootQueueMetrics() {
     rootMetrics.setAvailableResourcesToQueue(
         Resources.subtract(
             clusterCapacity, rootMetrics.getAllocatedResources()));
@@ -1421,6 +1452,7 @@ public class FairScheduler extends AbstractYarnScheduler {
     
     // Check whether the move would go over maxRunningApps or maxShare
     FSQueue cur = targetQueue;
+    LOG.info("Evan Evan Evan: Trying to move an app to a dif queue...");
     while (cur != lowestCommonAncestor) {
       // maxRunningApps
       if (cur.getNumRunnableApps() == allocConf.getQueueMaxApps(cur.getQueueName())) {
@@ -1439,6 +1471,7 @@ public class FairScheduler extends AbstractYarnScheduler {
       
       cur = cur.getParent();
     }
+    LOG.info("EVAN EVAN EVAN: App is allowed to move to dif queue");
   }
   
   /**

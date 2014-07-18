@@ -40,6 +40,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
+//NATERO
+//NATERO
+import org.apache.hadoop.yarn.api.records.ResourceOption;
+//NATERO
+//NATERO
 
 @Private
 @Unstable
@@ -66,6 +71,11 @@ public class FSSchedulerNode extends SchedulerNode {
   private final RMNode rmNode;
   private final String nodeName;
 
+  //Natero
+  //Boolean tracking whether node has been marked decommissioned via web rest api
+  //Natero
+  private boolean decommissioned = false;
+
   public FSSchedulerNode(RMNode node, boolean usePortForNodeName) {
     this.rmNode = node;
     this.availableResource = Resources.clone(node.getTotalCapability());
@@ -77,6 +87,38 @@ public class FSSchedulerNode extends SchedulerNode {
     } else {
       nodeName = rmNode.getHostName();
     }
+  }
+
+  /**
+   * Natero
+   * Sets decommissioned flag to true
+   * Natero
+   */
+  public void setDecomFlag(){
+    decommissioned = true;
+
+    // Resource fakeResource = recordFactory.newRecordInstance(Resource.class);
+    // if(rmNode != null){
+    //   LOG.info("EVAN:Hacking the RMNode resource option");
+    //   ResourceOption reop = rmNode.getResourceOption();
+    //   int overcommittimeout = -1;
+    //   if(reop != null){
+    //     overcommittimeout = reop.getOverCommitTimeout(); //set overcommittimeout in new resource option to whatever it was before.
+    //   }
+    //   ResourceOption newReop = ResourceOption.newInstance(fakeResource, overcommittimeout);
+    //   rmNode.setResourceOption(newReop);
+    // }
+    // LOG.info("EVAN: Set corresponding rmNode capability to 0.");
+  }
+
+  /**
+   * Natero
+   * Returns whether node has been marked decommissioned
+   * Natero
+   * @return true if decommissioned flag is set, false otherwise
+   */
+  public boolean isDecommissioned(){
+    return decommissioned;
   }
 
   public RMNode getRMNode() {
@@ -125,12 +167,25 @@ public class FSSchedulerNode extends SchedulerNode {
 
   @Override
   public synchronized Resource getAvailableResource() {
-    return availableResource;
+    //NATERO
+    //Always return 0 resources if decommissioned
+    if(decommissioned){
+      Resource fakeResource = recordFactory.newRecordInstance(Resource.class); //Presumably creates empty resource
+      return fakeResource;
+    }else{
+      return availableResource;
+    }
   }
 
   @Override
   public synchronized Resource getUsedResource() {
-    return usedResource;
+    //NATERO
+    //Always return total resources if decommissioned
+    if(decommissioned){
+      return getTotalResource();
+    }else{
+      return usedResource;
+    }
   }
 
   private synchronized boolean isValidContainer(Container c) {    
@@ -236,7 +291,13 @@ public class FSSchedulerNode extends SchedulerNode {
       LOG.info("Updated reserved container " + 
           reservedContainer.getContainer().getId() + " on node " + 
           this + " for application " + application);
-    } else {
+
+    //NATERO: dont allow reserving a resource if node is being decommissioned
+    }else if(decommissioned){
+      LOG.info("Trying to reserve resource on a decommissioned node.");
+      throw new IllegalStateException("Trying to reserve resource on a decommissioned node.");
+
+    }else {
       LOG.info("Reserved container " + reservedContainer.getContainer().getId() + 
           " on node " + this + " for application " + application);
     }

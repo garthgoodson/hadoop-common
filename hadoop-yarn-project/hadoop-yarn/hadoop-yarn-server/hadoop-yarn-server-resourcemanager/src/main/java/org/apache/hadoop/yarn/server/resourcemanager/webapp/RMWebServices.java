@@ -78,6 +78,19 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+//Natero
+//Natero
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DecomNodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AppSchedulable;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.Resources;
+//Natero
+//Natero
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
@@ -214,6 +227,57 @@ public class RMWebServices {
     }
     
     return nodesInfo;
+  }
+
+  /**
+   * Natero
+   * Natero
+   * Custom web api to decommission a node
+   * Natero
+   * Natero
+   */
+  @GET
+  @Path("/decom/{nodeId}")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+  public DecomNodeInfo decomNode(@PathParam("nodeId") String nodeId){
+    init();
+    if (nodeId == null || nodeId.isEmpty()) {
+      throw new NotFoundException("nodeId, " + nodeId + ", is empty or null");
+    }
+    //Ensure that scheduler used is FairScheduler
+    ResourceScheduler sched = this.rm.getResourceScheduler();
+    if (sched == null || !(sched instanceof FairScheduler)) {
+      throw new NotFoundException("Invalid ResourceScheduler instance, must be a FairScheduler");
+    }
+    FairScheduler fairSched = (FairScheduler) sched;
+    //Get the NodeId and find appropriate FSSchedulerNode
+    NodeId nid = ConverterUtils.toNodeId(nodeId);
+    FSSchedulerNode decomNode = fairSched.getNode(nid); //method added to FairScheduler
+
+    if(!decomNode.isDecommissioned()){
+      decomNode.setDecomFlag(); //Add this method to FSSchedulerNode
+      LOG.info("Signaled "+nodeId+" to be decommissioned");
+
+      Resource clusterCapacity = fairSched.getClusterCapacity();
+      Resources.subtractFrom(clusterCapacity, decomNode.getUsedResource());
+      fairSched.updateRootQueueMetrics();
+      LOG.info("New cluster capacity: "+clusterCapacity);
+      
+      //Get reserved container if it exists & get application id from it if it does
+      RMContainer reservedContainer = decomNode.getReservedContainer();
+      //Check if reservation exists
+      if(reservedContainer != null){
+        ApplicationAttemptId reservedContainerAppId = reservedContainer.getContainer().getId().getApplicationAttemptId();
+        FSSchedulerApp reservedApp = fairSched.getSchedulerApp(reservedContainerAppId);
+        //Unreserve the container
+        AppSchedulable resAppSchedulable = decomNode.getReservedAppSchedulable();
+        Priority resPriority = reservedContainer.getReservedPriority();
+        resAppSchedulable.unreserve(resPriority, decomNode);
+        //Might need to do other stuff to completely unreserve?
+      }
+    }
+    DecomNodeInfo retVal = new DecomNodeInfo(decomNode, fairSched);
+    return retVal;
   }
 
   @GET
