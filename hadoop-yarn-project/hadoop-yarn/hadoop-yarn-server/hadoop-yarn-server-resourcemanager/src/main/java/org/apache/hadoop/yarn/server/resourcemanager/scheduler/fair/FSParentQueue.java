@@ -150,7 +150,7 @@ public class FSParentQueue extends FSQueue {
     //If this node is marked decommissioned, reject
     //NATERO
     if (node.isDecommissioned()){
-      LOG.info("Trying to assign container on decommissioned node, REEEJECTTEDDDDDDD");
+      LOG.info("Trying to assign container on decommissioned node, reservation rejected");
       return assigned;
     }
 

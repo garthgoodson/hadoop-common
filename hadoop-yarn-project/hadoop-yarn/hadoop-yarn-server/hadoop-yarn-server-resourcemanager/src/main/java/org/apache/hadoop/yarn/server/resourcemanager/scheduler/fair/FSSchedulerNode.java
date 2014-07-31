@@ -96,19 +96,6 @@ public class FSSchedulerNode extends SchedulerNode {
    */
   public void setDecomFlag(){
     decommissioned = true;
-
-    // Resource fakeResource = recordFactory.newRecordInstance(Resource.class);
-    // if(rmNode != null){
-    //   LOG.info("EVAN:Hacking the RMNode resource option");
-    //   ResourceOption reop = rmNode.getResourceOption();
-    //   int overcommittimeout = -1;
-    //   if(reop != null){
-    //     overcommittimeout = reop.getOverCommitTimeout(); //set overcommittimeout in new resource option to whatever it was before.
-    //   }
-    //   ResourceOption newReop = ResourceOption.newInstance(fakeResource, overcommittimeout);
-    //   rmNode.setResourceOption(newReop);
-    // }
-    // LOG.info("EVAN: Set corresponding rmNode capability to 0.");
   }
 
   /**

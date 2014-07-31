@@ -75,14 +75,11 @@ public class MaxRunningAppsEnforcer {
       int calculatedMaxApps = calculateMaxApps(queueMaxApps);
       // calculatedMaxApps = queueMaxApps; //uncomment this to put everything back to normal
 
-      LOG.info("EvAn eVaN EvAn: cur num runnable apps: "+queue.getNumRunnableApps());
       if (queue.getNumRunnableApps() >= calculatedMaxApps) {
-        LOG.info("evan EVAN evan: App rejected, queue runnable app count:"+queue.getNumRunnableApps()+" >= "+calculatedMaxApps);
         return false;
       }
       queue = queue.getParent();
     }
-    LOG.info("EVAN evan EVAN: App allowed!");
     return true;
   }
 
@@ -95,10 +92,9 @@ public class MaxRunningAppsEnforcer {
    */
   public int calculateMaxApps(int queueMaxApps){
     int clusterVcores = scheduler.getClusterCapacity().getVirtualCores();
-    LOG.info("EVAN EVAN EVAN: Calculating max apps. cluster vcores: "+clusterVcores+", maxAppsPercent: "+queueMaxApps+"%");
     float maxAppsPercent = ((float)queueMaxApps) / 100.0f;
     int calculatedMaxApps = (int) (maxAppsPercent * clusterVcores);
-    LOG.info("EVAN Evan eVan: calculated max apps: "+calculatedMaxApps);
+    LOG.info("Natero: cluster config allowed app-vcore ratio: "+queueMaxApps+"% ("+clusterVcores+" vcores). Allowed num apps: "+calculatedMaxApps);
     return calculatedMaxApps;
   }
 
@@ -157,7 +153,6 @@ public class MaxRunningAppsEnforcer {
     int calculatedMaxApps = calculateMaxApps(queueMaxApps);
     //calculatedMaxApps = queueMaxApps; //Uncomment this to put things back to normal
 
-    LOG.info("evaN Evan evaN: queue num runnable apps:"+queue.getNumRunnableApps()+", queue max apps:"+(calculatedMaxApps - 1));
     FSQueue highestQueueWithAppsNowRunnable = (queue.getNumRunnableApps() ==
         (calculatedMaxApps - 1)) ? queue : null;
     FSParentQueue parent = queue.getParent();
